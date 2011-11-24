@@ -54,19 +54,6 @@ public class RefreshableListView extends ListView {
 		initialize();
 	}
 	
-	public void initialize() {
-		LayoutInflater inflater = (LayoutInflater) getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-		mHeaderContainer = inflater.inflate(R.layout.refreshable_list_header, null);
-		mHeaderView = mHeaderContainer.findViewById(R.id.refreshable_list_header);
-		mArrow = (ImageView) mHeaderContainer.findViewById(R.id.refreshable_list_arrow);
-		mProgress = (ProgressBar) mHeaderContainer.findViewById(R.id.refreshable_list_progress);
-		mText = (TextView) mHeaderContainer.findViewById(R.id.refreshable_list_text);
-		addHeaderView(mHeaderContainer);
-		
-		mHeaderHeight = (int) (HEADER_HEIGHT_PX * getContext().getResources().getDisplayMetrics().density);
-		setHeaderHeight(0);
-	}
-	
 	public void setOnRefreshListener(OnRefreshListener l) {
 		mListener = l;
 	}
@@ -142,6 +129,19 @@ public class RefreshableListView extends ListView {
         
         return super.dispatchTouchEvent(ev);
     }
+	
+	private void initialize() {
+		LayoutInflater inflater = (LayoutInflater) getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+		mHeaderContainer = inflater.inflate(R.layout.refreshable_list_header, null);
+		mHeaderView = mHeaderContainer.findViewById(R.id.refreshable_list_header);
+		mArrow = (ImageView) mHeaderContainer.findViewById(R.id.refreshable_list_arrow);
+		mProgress = (ProgressBar) mHeaderContainer.findViewById(R.id.refreshable_list_progress);
+		mText = (TextView) mHeaderContainer.findViewById(R.id.refreshable_list_text);
+		addHeaderView(mHeaderContainer);
+		
+		mHeaderHeight = (int) (HEADER_HEIGHT_PX * getContext().getResources().getDisplayMetrics().density);
+		setHeaderHeight(0);
+	}
 	
 	private void setHeaderHeight(int height) {
 		// Extends refresh bar
