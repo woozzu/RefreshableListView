@@ -30,8 +30,10 @@ public class RefreshableListView extends ListView {
 	private float mY = 0;
 	private float mHistoricalY = 0;
 	private int mHistoricalTop = 0;
+	private int mInitialHeight = 0;
 	private boolean mFlag = false;
 	private boolean mArrowUp = false;
+	private boolean mIsRefreshing = false;
 	private int mHeaderHeight = 0;
 	private OnRefreshListener mListener = null;
 	
@@ -62,6 +64,7 @@ public class RefreshableListView extends ListView {
 		mProgress.setVisibility(View.INVISIBLE);
 		mArrow.setVisibility(View.VISIBLE);
 		mHandler.sendMessage(mHandler.obtainMessage(NORMAL, mHeaderHeight, 0));
+		mIsRefreshing = false;
 		invalidateViews();
 	}
 
@@ -69,18 +72,26 @@ public class RefreshableListView extends ListView {
 	public boolean onTouchEvent(MotionEvent ev) {
 		switch (ev.getAction()) {
 		case MotionEvent.ACTION_DOWN:
+			mHandler.removeMessages(REFRESH);
+			mHandler.removeMessages(NORMAL);
 			mY = mHistoricalY = ev.getY();
+			if (mHeaderContainer.getLayoutParams() != null)
+				mInitialHeight = mHeaderContainer.getLayoutParams().height;
 			break;
 		case MotionEvent.ACTION_MOVE:
 			mHistoricalTop = getChildAt(0).getTop();
 			break;
 		case MotionEvent.ACTION_UP:
-			if (mArrowUp) {
-				startRefreshing();
-				mHandler.sendMessage(mHandler.obtainMessage(REFRESH, (int) (ev.getY() - mY) / 2, 0));
+			if (!mIsRefreshing) {
+				if (mArrowUp) {
+					startRefreshing();
+					mHandler.sendMessage(mHandler.obtainMessage(REFRESH, (int) (ev.getY() - mY) / 2 + mInitialHeight, 0));
+				} else {
+					if (getChildAt(0).getTop() == 0)
+						mHandler.sendMessage(mHandler.obtainMessage(NORMAL, (int) (ev.getY() - mY) / 2 + mInitialHeight, 0));
+				}
 			} else {
-				if (getChildAt(0).getTop() == 0)
-					mHandler.sendMessage(mHandler.obtainMessage(NORMAL, (int) (ev.getY() - mY) / 2, 0));
+				mHandler.sendMessage(mHandler.obtainMessage(REFRESH, (int) (ev.getY() - mY) / 2 + mInitialHeight, 0));
 			}
 			mFlag = false;
 			break;
@@ -89,46 +100,46 @@ public class RefreshableListView extends ListView {
 	}
 
 	@Override
-    public boolean dispatchTouchEvent(MotionEvent ev) {
-        if (ev.getAction() == MotionEvent.ACTION_MOVE && getFirstVisiblePosition() == 0) {
-        	float direction = ev.getY() - mHistoricalY;
-        	
-        	// Scrolling downward
-    		if (direction > 0) {
-    			// Refresh bar is extended if top pixel of the first item is visible
-    			if (getChildAt(0).getTop() == 0) {
-    				if (mHistoricalTop < 0) {
-    					mY = ev.getY();
-    					mHistoricalTop = 0;
-    				}
-    				
-    				// Extends refresh bar
-    				setHeaderHeight((int) (ev.getY() - mY) / 2);
-    				
-    				// Stop list scroll to prevent the list from overscrolling
-    				ev.setAction(MotionEvent.ACTION_CANCEL);
-    				mFlag = false;
-            	}
-    		} else if (direction < 0) {
-    			// Scrolling upward
-    			
-    			// Refresh bar is shortened if top pixel of the first item is visible
-    			if (getChildAt(0).getTop() == 0) {
-    				setHeaderHeight((int) (ev.getY() - mY) / 2);
-    				
-    				// If scroll reaches top of the list, list scroll is enabled
-    				if (getChildAt(1).getTop() == 1 && !mFlag) {
-    	        		ev.setAction(MotionEvent.ACTION_DOWN);
-    	        		mFlag = true;
-            		}
-            	}
-        	}
-    		
-        	mHistoricalY = ev.getY();
-        }
-        
-        return super.dispatchTouchEvent(ev);
-    }
+	public boolean dispatchTouchEvent(MotionEvent ev) {
+		if (ev.getAction() == MotionEvent.ACTION_MOVE && getFirstVisiblePosition() == 0) {
+			float direction = ev.getY() - mHistoricalY;
+			
+			// Scrolling downward
+			if (direction > 0) {
+				// Refresh bar is extended if top pixel of the first item is visible
+				if (getChildAt(0).getTop() == 0) {
+					if (mHistoricalTop < 0) {
+						mY = ev.getY();
+						mHistoricalTop = 0;
+					}
+					
+					// Extends refresh bar
+					setHeaderHeight((int) (ev.getY() - mY) / 2 + mInitialHeight);
+					
+					// Stop list scroll to prevent the list from overscrolling
+					ev.setAction(MotionEvent.ACTION_CANCEL);
+					mFlag = false;
+		    	}
+			} else if (direction < 0) {
+				// Scrolling upward
+				
+				// Refresh bar is shortened if top pixel of the first item is visible
+				if (getChildAt(0).getTop() == 0) {
+					setHeaderHeight((int) (ev.getY() - mY) / 2 + mInitialHeight);
+					
+					// If scroll reaches top of the list, list scroll is enabled
+					if (getChildAt(1).getTop() == 1 && !mFlag) {
+		        		ev.setAction(MotionEvent.ACTION_DOWN);
+		        		mFlag = true;
+		    		}
+		    	}
+			}
+			
+			mHistoricalY = ev.getY();
+		}
+		
+		return super.dispatchTouchEvent(ev);
+	}
 	
 	private void initialize() {
 		LayoutInflater inflater = (LayoutInflater) getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
@@ -158,17 +169,19 @@ public class RefreshableListView extends ListView {
 		headerLp.topMargin = -mHeaderHeight + height;
 		mHeaderView.setLayoutParams(headerLp);
 		
-		// If scroll reaches the trigger line, start refreshing
-		if (height > mHeaderHeight && !mArrowUp) {
-			mArrow.startAnimation(AnimationUtils.loadAnimation(getContext(), R.anim.rotate));
-			mText.setText("Release to update");
-			rotateArrow();
-			mArrowUp = true;
-		} else if (height < mHeaderHeight && mArrowUp) {
-			mArrow.startAnimation(AnimationUtils.loadAnimation(getContext(), R.anim.rotate));
-			mText.setText("Pull down to update");
-			rotateArrow();
-			mArrowUp = false;
+		if (!mIsRefreshing) {
+			// If scroll reaches the trigger line, start refreshing
+			if (height > mHeaderHeight && !mArrowUp) {
+				mArrow.startAnimation(AnimationUtils.loadAnimation(getContext(), R.anim.rotate));
+				mText.setText("Release to update");
+				rotateArrow();
+				mArrowUp = true;
+			} else if (height < mHeaderHeight && mArrowUp) {
+				mArrow.startAnimation(AnimationUtils.loadAnimation(getContext(), R.anim.rotate));
+				mText.setText("Pull down to update");
+				rotateArrow();
+				mArrowUp = false;
+			}
 		}
 	}
 	
@@ -188,6 +201,7 @@ public class RefreshableListView extends ListView {
 		mArrow.setVisibility(View.INVISIBLE);
 		mProgress.setVisibility(View.VISIBLE);
 		mText.setText("Loading...");
+		mIsRefreshing = true;
 		
 		if (mListener != null)
 			mListener.onRefresh();
