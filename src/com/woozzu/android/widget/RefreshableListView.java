@@ -39,7 +39,7 @@ public class RefreshableListView extends ListView {
 	
 	private static final int REFRESH = 0;
 	private static final int NORMAL = 1;
-	private static final int HEADER_HEIGHT_PX = 62;
+	private static final int HEADER_HEIGHT_DP = 62;
 
 	public RefreshableListView(Context context) {
 		super(context);
@@ -150,11 +150,16 @@ public class RefreshableListView extends ListView {
 		mText = (TextView) mHeaderContainer.findViewById(R.id.refreshable_list_text);
 		addHeaderView(mHeaderContainer);
 		
-		mHeaderHeight = (int) (HEADER_HEIGHT_PX * getContext().getResources().getDisplayMetrics().density);
+		mHeaderHeight = (int) (HEADER_HEIGHT_DP * getContext().getResources().getDisplayMetrics().density);
 		setHeaderHeight(0);
 	}
 	
 	private void setHeaderHeight(int height) {
+		if (height <= 1)
+			mHeaderView.setVisibility(View.GONE);
+		else
+			mHeaderView.setVisibility(View.VISIBLE);
+		
 		// Extends refresh bar
 		LayoutParams lp = (LayoutParams) mHeaderContainer.getLayoutParams();
 		if (lp == null)
