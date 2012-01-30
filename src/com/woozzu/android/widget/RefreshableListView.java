@@ -135,7 +135,7 @@ public class RefreshableListView extends ListView {
 					// Stop list scroll to prevent the list from overscrolling
 					ev.setAction(MotionEvent.ACTION_CANCEL);
 					mFlag = false;
-		    	}
+		    		}
 			} else if (direction < 0) {
 				// Scrolling upward
 				
@@ -144,11 +144,11 @@ public class RefreshableListView extends ListView {
 					setHeaderHeight((int) (ev.getY() - mY) / 2 + mInitialHeight);
 					
 					// If scroll reaches top of the list, list scroll is enabled
-					if (getChildAt(1).getTop() == 1 && !mFlag) {
-		        		ev.setAction(MotionEvent.ACTION_DOWN);
-		        		mFlag = true;
-		    		}
-		    	}
+					if (getChildAt(1) != null && getChildAt(1).getTop() == 1 && !mFlag) {
+		        			ev.setAction(MotionEvent.ACTION_DOWN);
+		        			mFlag = true;
+			    		}
+			    	}
 			}
 			
 			mHistoricalY = ev.getY();
